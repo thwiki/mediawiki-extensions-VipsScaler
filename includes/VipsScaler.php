@@ -368,7 +368,7 @@ class VipsScaler {
 	public static function getVipsHandler( $file ) {
 		list( $major, $minor ) = File::splitMime( $file->getMimeType() );
 
-		if ( $major == 'image' && in_array( $minor, [ 'jpeg', 'png', 'tiff' ] ) ) {
+		if ( $major == 'image' && in_array( $minor, [ 'jpeg', 'png', 'tiff', 'webp' ] ) ) {
 			return "im_{$minor}2vips";
 		} else {
 			return false;
