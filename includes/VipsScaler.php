@@ -87,19 +87,23 @@ class VipsScaler {
 		) {
 			$actualSrcPath .= $vipsCommands[0]->makePageArgument( $params['page'] );
 		}
+
+		// .apng extension is not recognized by libvips
+		$actualDstPath = preg_replace( '/\.apng$/', '.png', $params['dstPath'], 1 );
+
 		// Execute the commands
 		/** @var VipsCommand $command */
 		foreach ( $vipsCommands as $i => $command ) {
 			// Set input/output files
 			if ( $i == 0 && count( $vipsCommands ) == 1 ) {
 				// Single command, so output directly to dstPath
-				$command->setIO( $actualSrcPath, $params['dstPath'] );
+				$command->setIO( $actualSrcPath, $actualDstPath );
 			} elseif ( $i == 0 ) {
 				// First command, input from srcPath, output to temp
 				$command->setIO( $actualSrcPath, 'v', VipsCommand::TEMP_OUTPUT );
 			} elseif ( $i + 1 == count( $vipsCommands ) ) {
 				// Last command, output to dstPath
-				$command->setIO( $vipsCommands[$i - 1], $params['dstPath'] );
+				$command->setIO( $vipsCommands[$i - 1], $actualDstPath );
 			} else {
 				$command->setIO( $vipsCommands[$i - 1], 'v', VipsCommand::TEMP_OUTPUT );
 			}
@@ -115,7 +119,12 @@ class VipsScaler {
 
 		// Set comment
 		if ( !empty( $options['setcomment'] ) && !empty( $params['comment'] ) ) {
-			self::setJpegComment( $params['dstPath'], $params['comment'] );
+			self::setJpegComment( $actualDstPath, $params['comment'] );
+		}
+
+		// Move to the correct extension
+		if ( $actualDstPath !== $params['dstPath'] ){
+			rename($actualDstPath, $params['dstPath']);
 		}
 
 		// Set the output variable
@@ -238,6 +247,11 @@ class VipsScaler {
 				// File type unsupported for interlacing, return empty array to cancel processing
 				return [];
 			}
+		}
+
+		// Optimize
+		if ( isset( $options['optimize'] ) && $options['optimize'] ) {
+			$commands[] = new VipsThumbnail( $wgVipsCommand, ['--size', '1x1<'], $options['optimize'] );
 		}
 
 		return $commands;
